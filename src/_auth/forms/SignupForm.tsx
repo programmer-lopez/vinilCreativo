@@ -15,23 +15,23 @@ import { Button } from "@/components/ui/button";
 import { SignupValidation } from "@/lib/validation";
 import { z } from "zod";
 import Loader from "@/components/shared/Loader";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import {
   useCreateUserAccount,
   useSignInAccount,
 } from "@/lib/react-query/queryAndMutations";
+import { useUserContext } from "@/context/AuthContext";
 
 const SignupForm = () => {
+  const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { mutateAsync: createUserAccount, isLoading: isCreatingAccount } =
+  const { mutateAsync: createUserAccount, isPending: isCreatingAccount } =
     useCreateUserAccount();
-  const {
-    mutateAsync: signInAccount,
-    isLoading,
-    isSigningIn,
-  } = useSignInAccount();
+  const { mutateAsync: signInAccount, isPending: isSigningInUser } =
+    useSignInAccount();
 
   const form = useForm<z.infer<typeof SignupValidation>>({
     resolver: zodResolver(SignupValidation),
@@ -49,7 +49,7 @@ const SignupForm = () => {
 
     if (!newUser) {
       return toast({
-        title: "Sign up falled. please try again",
+        title: "Sign up falled. please try again.",
       });
       const session = await signInAccount({
         email: values.email,
@@ -57,6 +57,13 @@ const SignupForm = () => {
       });
       if (!session) {
         return toast({ title: "Sign in failed. Please try again." });
+      }
+      const isLoggedIn = await checkAuthUser();
+      if (isLoggedIn) {
+        form.reset();
+        navigate("/");
+      } else {
+        toast({ title: "Sing-Up failed.please try again" });
       }
     }
   }
@@ -129,7 +136,7 @@ const SignupForm = () => {
             )}
           />
           <Button type="submit" className="shad-button_primary">
-            {isCreatingUser ? (
+            {isCreatingAccount ? (
               <div className="flex-center gap-2">
                 <Loader /> Loading...
               </div>
@@ -152,4 +159,4 @@ const SignupForm = () => {
   );
 };
 
-export default SignupForm;
+export default SignupForm();
